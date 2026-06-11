@@ -72,12 +72,12 @@ class LivestockFSM:
                 # Called with empty string at app boot — just set welcome msg
                 self.response = self._WELCOME
                 return
-            # Any real input kicks off ordering
-            self.state    = State.ORDERING
-            self.response = self._WELCOME
+            # Transition to ORDERING, then fall through to process the input
+            self.state = State.ORDERING
 
         # --- ORDERING ---------------------------------------------------
-        elif self.state == State.ORDERING:
+        # NOTE: no `elif` — intentional fall-through when transitioning from IDLE
+        if self.state == State.ORDERING:
             if intent == "ASK_MENU":
                 lines = "\n".join(
                     f"{d['emoji']} **{k.capitalize()}** — Rp {d['price']:,}  \n{d['desc']}"
