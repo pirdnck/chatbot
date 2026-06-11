@@ -10,25 +10,26 @@ class State(Enum):
 
 class LivestockFSM:
     """
-    Finite State Machine for the Berkah Ternak chatbot.
+    FSM untuk Berkah Ternak chatbot.
 
     State transitions:
-        IDLE ──(any non-reset input)──► ORDERING
-        ORDERING ──(checkout + cart not empty)──► CONFIRMATION
-        ORDERING ──(reset)──► IDLE
-        CONFIRMATION ──(checkout/yes)──► IDLE  (cart cleared)
-        CONFIRMATION ──(reset)──► IDLE  (cart cleared)
-        * IDLE state never auto-transitions on empty input
+        IDLE ──(any input)──────────────► ORDERING  (fall-through processes input)
+        ORDERING ──(checkout, cart > 0)─► CONFIRMATION
+        ORDERING ──(reset)──────────────► IDLE
+        CONFIRMATION ──(checkout/ya)────► IDLE  (cart cleared)
+        CONFIRMATION ──(reset)──────────► IDLE  (cart cleared)
+
+    Sprint 1: tambah cart_remove(item) dan cart_update_qty(item, delta)
+              yang bisa dipanggil langsung dari UI tanpa melalui chat.
     """
 
-    # Response templates — easier to maintain outside step()
-    _WELCOME  = (
+    _WELCOME = (
         "Selamat datang di **Berkah Ternak** 👨‍🌾\n\n"
         "Kami menghadirkan produk segar langsung dari peternakan lokal. "
         "Pilih produk di samping atau ketik pesanan Anda!"
     )
-    _EMPTY_CART   = "Keranjang masih kosong. Pilih produk terlebih dahulu. 🛒"
-    _UNRECOGNIZED = (
+    _EMPTY_CART     = "Keranjang masih kosong. Pilih produk terlebih dahulu. 🛒"
+    _UNRECOGNIZED   = (
         "Produk tidak dikenali. Coba: *'pesan 2 susu dan 1 telur'* "
         "atau klik tombol produk di samping."
     )
@@ -38,13 +39,13 @@ class LivestockFSM:
     )
 
     def __init__(self) -> None:
-        self.state    = State.IDLE
-        self.nlp      = LivestockEngine()
-        self.cart:    list[dict] = []
+        self.state     = State.IDLE
+        self.nlp       = LivestockEngine()
+        self.cart:     list[dict] = []
         self.response: str = ""
 
     # ------------------------------------------------------------------
-    # Public API
+    # Public API — read
     # ------------------------------------------------------------------
 
     def get_response(self) -> str:
@@ -53,30 +54,49 @@ class LivestockFSM:
     def calculate_total(self) -> int:
         return sum(item["price"] * item["qty"] for item in self.cart)
 
+    # ------------------------------------------------------------------
+    # Public API — cart mutation (Sprint 1)
+    # Dipanggil langsung dari tombol UI, tidak melalui chat step().
+    # ------------------------------------------------------------------
+
+    def cart_update_qty(self, item_key: str, delta: int) -> None:
+        """
+        Tambah (delta > 0) atau kurangi (delta < 0) qty item di cart.
+        Otomatis hapus item jika qty ≤ 0.
+        """
+        existing = next((i for i in self.cart if i["item"] == item_key), None)
+        if not existing:
+            return
+        existing["qty"] += delta
+        if existing["qty"] <= 0:
+            self.cart.remove(existing)
+
+    def cart_remove(self, item_key: str) -> None:
+        """Hapus item tertentu dari cart sepenuhnya."""
+        self.cart = [i for i in self.cart if i["item"] != item_key]
+
+    # ------------------------------------------------------------------
+    # Public API — step (chat input)
+    # ------------------------------------------------------------------
+
     def step(self, user_input: str = "") -> None:
-        """
-        Advance the FSM by one step given raw user text.
-        Empty string on IDLE is safe — no state change occurs.
-        """
         text   = user_input.strip()
         intent = self.nlp.detect_intent(text) if text else "NOOP"
 
-        # Global RESET — valid from any state
+        # Global RESET dari state manapun
         if intent == "RESET":
             self._reset("Keranjang dikosongkan. Halo lagi! Mau pesan apa hari ini? 🌾")
             return
 
-        # --- IDLE -------------------------------------------------------
+        # --- IDLE ---
         if self.state == State.IDLE:
             if not text:
-                # Called with empty string at app boot — just set welcome msg
                 self.response = self._WELCOME
                 return
-            # Transition to ORDERING, then fall through to process the input
             self.state = State.ORDERING
+            # fall-through ke ORDERING block
 
-        # --- ORDERING ---------------------------------------------------
-        # NOTE: no `elif` — intentional fall-through when transitioning from IDLE
+        # --- ORDERING --- (no elif — intentional fall-through dari IDLE)
         if self.state == State.ORDERING:
             if intent == "ASK_MENU":
                 lines = "\n".join(
@@ -95,7 +115,21 @@ class LivestockFSM:
                         "Apakah Anda ingin melanjutkan pembayaran?"
                     )
 
-            else:  # ORDER intent
+            elif intent == "REDUCE":
+                # Coba parse item yang mau dikurangi
+                orders = self.nlp.parse_orders(text)
+                if orders:
+                    for o in orders:
+                        self.cart_update_qty(o["item"], -o["qty"])
+                    self.response = (
+                        f"✅ Pesanan diperbarui. "
+                        f"Total sementara: **Rp {self.calculate_total():,}**"
+                        + ("  \nKeranjang kosong." if not self.cart else "")
+                    )
+                else:
+                    self.response = "Sebutkan produk yang ingin dikurangi. Contoh: *'kurangi 1 susu'*."
+
+            else:  # ORDER
                 new_orders = self.nlp.parse_orders(text)
                 if new_orders:
                     self._merge_orders(new_orders)
@@ -111,7 +145,7 @@ class LivestockFSM:
                 else:
                     self.response = self._UNRECOGNIZED
 
-        # --- CONFIRMATION -----------------------------------------------
+        # --- CONFIRMATION ---
         elif self.state == State.CONFIRMATION:
             if intent == "CHECKOUT":
                 total         = self.calculate_total()
@@ -130,7 +164,6 @@ class LivestockFSM:
     # ------------------------------------------------------------------
 
     def _merge_orders(self, new_orders: list[dict]) -> None:
-        """Upsert new orders into cart — increment qty if item exists."""
         for order in new_orders:
             existing = next(
                 (i for i in self.cart if i["item"] == order["item"]), None
@@ -138,7 +171,7 @@ class LivestockFSM:
             if existing:
                 existing["qty"] += order["qty"]
             else:
-                self.cart.append(dict(order))  # defensive copy
+                self.cart.append(dict(order))
 
     def _reset(self, msg: str) -> None:
         self.__init__()
