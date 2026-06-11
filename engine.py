@@ -4,10 +4,16 @@ class LivestockEngine:
     def __init__(self):
         # Database Produk Hasil Peternakan
         self.menu_data = {
-            "susu": {"price": 12000, "emoji": "🥛", "desc": "Susu sapi segar literan"},
-            "telur": {"price": 26000, "emoji": "🥚", "desc": "Telur ayam ras per kg"},
-            "daging": {"price": 35000, "emoji": "🍗", "desc": "Daging ayam segar per kg"},
-            "madu": {"price": 50000, "emoji": "🍯", "desc": "Madu murni alami 250ml"}
+            "susu": {"price": 12000, "emoji": "🥛", "desc": "Susu sapi segar literan murni"},
+            "telur": {"price": 26000, "emoji": "🥚", "desc": "Telur ayam ras pilihan per kg"},
+            "daging": {"price": 35000, "emoji": "🍗", "desc": "Daging ayam potong segar per kg"},
+            "madu": {"price": 50000, "emoji": "🍯", "desc": "Madu hutan murni alami 250ml"}
+        }
+        
+        # Database Paket Hemat (Bundle)
+        self.bundles = {
+            "paket sarapan": {"items": [("susu", 1), ("telur", 1)], "price": 35000, "desc": "1L Susu + 1kg Telur (Hemat Rp3.000)"},
+            "paket imun": {"items": [("susu", 2), ("madu", 1)], "price": 70000, "desc": "2L Susu + 1_botol Madu (Hemat Rp4.000)"}
         }
         
         self.re_number = r"\b(\d+)\b"
@@ -36,6 +42,21 @@ class LivestockEngine:
         }
 
     def parse_orders(self, full_text):
+        # Deteksi Paket Bundle terlebih dahulu
+        full_text_lower = full_text.lower()
+        for bundle_name, bundle_info in self.bundles.items():
+            if bundle_name in full_text_lower:
+                orders = []
+                for item_key, qty in bundle_info['items']:
+                    orders.append({
+                        "item": item_key,
+                        "qty": qty,
+                        "price": self.menu_data[item_key]['price'],
+                        "emoji": self.menu_data[item_key]['emoji']
+                    })
+                return orders
+
+        # Jika bukan paket, parsing eceran biasa
         segments = re.split(self.re_split, full_text)
         found_orders = []
         for segment in segments:
@@ -53,12 +74,14 @@ class LivestockEngine:
             return "CANCEL_ALL"
         if re.search(self.re_reduce, text):
             return "REDUCE_ITEM"
-        if re.search(r"(produk|daftar|stok|jual apa|list|menu)", text):
+        if re.search(r"(produk|daftar|stok|jual apa|list|menu|katalog)", text):
             return "ASK_MENU"
         if re.search(r"\b(selesai|bayar|checkout|cukup)\b", text):
             return "CHECKOUT"
-        if re.search(r"\b(ya|yes|oke|betul|siap|baik)\b", text):
+        if re.search(r"\b(ya|yes|oke|betul|siap|baik|lanjut)\b", text):
             return "YES"
         if re.search(r"\b(tidak|enggak|batal|no|salah)\b", text):
             return "NO"
+        if re.search(r"\b(ternakhemat|promo46)\b", text):
+            return "APPLY_PROMO"
         return "UNKNOWN"
