@@ -2,27 +2,18 @@ import re
 
 class LivestockEngine:
     def __init__(self):
-        # Database Produk Hasil Peternakan
+        # Database Produk Hasil Peternakan (Emoji & Harga Bersih)
         self.menu_data = {
-            "susu": {"price": 12000, "emoji": "🥛", "desc": "Susu sapi segar literan murni"},
-            "telur": {"price": 26000, "emoji": "🥚", "desc": "Telur ayam ras pilihan per kg"},
-            "daging": {"price": 35000, "emoji": "🍗", "desc": "Daging ayam potong segar per kg"},
-            "madu": {"price": 50000, "emoji": "🍯", "desc": "Madu hutan murni alami 250ml"}
-        }
-        
-        # Database Paket Hemat (Bundle)
-        self.bundles = {
-            "paket sarapan": {"items": [("susu", 1), ("telur", 1)], "price": 35000, "desc": "1L Susu + 1kg Telur (Hemat Rp3.000)"},
-            "paket imun": {"items": [("susu", 2), ("madu", 1)], "price": 70000, "desc": "2L Susu + 1_botol Madu (Hemat Rp4.000)"}
+            "susu": {"price": 12000, "emoji": "🥛", "desc": "Susu Sapi Segar (1 Liter)"},
+            "telur": {"price": 26000, "emoji": "🥚", "desc": "Telur Ayam Pilihan (1 Kg)"},
+            "daging": {"price": 35000, "emoji": "🍗", "desc": "Daging Ayam Segar (1 Kg)"},
+            "madu": {"price": 50000, "emoji": "🍯", "desc": "Madu Murni Alami (250ml)"}
         }
         
         self.re_number = r"\b(\d+)\b"
         menu_keys = "|".join(self.menu_data.keys())
         self.re_menu = rf"\b({menu_keys})\b"
         self.re_split = r"[,.]|\bdan\b|\b&\b"
-        
-        self.re_cancel_all = r"\b(batalkan semua|hapus semua|reset keranjang|kosongkan)\b"
-        self.re_reduce = r"\b(batalkan|kurangi|tidak jadi|hapus|cancel)\b"
 
     def _parse_single_segment(self, text):
         text = text.lower().strip()
@@ -42,21 +33,6 @@ class LivestockEngine:
         }
 
     def parse_orders(self, full_text):
-        # Deteksi Paket Bundle terlebih dahulu
-        full_text_lower = full_text.lower()
-        for bundle_name, bundle_info in self.bundles.items():
-            if bundle_name in full_text_lower:
-                orders = []
-                for item_key, qty in bundle_info['items']:
-                    orders.append({
-                        "item": item_key,
-                        "qty": qty,
-                        "price": self.menu_data[item_key]['price'],
-                        "emoji": self.menu_data[item_key]['emoji']
-                    })
-                return orders
-
-        # Jika bukan paket, parsing eceran biasa
         segments = re.split(self.re_split, full_text)
         found_orders = []
         for segment in segments:
@@ -67,21 +43,11 @@ class LivestockEngine:
         return found_orders
 
     def detect_intent(self, text):
-        text = text.lower()
-        if re.search(r"\b(reset|ulang|batal semua)\b", text):
+        text = text.lower().strip()
+        if re.search(r"\b(reset|ulang|batal)\b", text):
             return "RESET"
-        if re.search(self.re_cancel_all, text):
-            return "CANCEL_ALL"
-        if re.search(self.re_reduce, text):
-            return "REDUCE_ITEM"
-        if re.search(r"(produk|daftar|stok|jual apa|list|menu|katalog)", text):
+        if re.search(r"(produk|daftar|stok|list|menu|katalog)", text):
             return "ASK_MENU"
-        if re.search(r"\b(selesai|bayar|checkout|cukup)\b", text):
+        if re.search(r"\b(selesai|bayar|checkout|cukup|ya|oke|fix)\b", text):
             return "CHECKOUT"
-        if re.search(r"\b(ya|yes|oke|betul|siap|baik|lanjut)\b", text):
-            return "YES"
-        if re.search(r"\b(tidak|enggak|batal|no|salah)\b", text):
-            return "NO"
-        if re.search(r"\b(ternakhemat|promo46)\b", text):
-            return "APPLY_PROMO"
-        return "UNKNOWN"
+        return "ORDER"
