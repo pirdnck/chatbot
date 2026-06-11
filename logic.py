@@ -274,48 +274,33 @@ def _send(user_text: str) -> None:
     st.rerun()
 
 
-def _render_cart_html(cart: list[dict], total: int) -> str:
-    """
-    Returns self-contained HTML with inline styles only.
-    Avoids relying on Streamlit-injected CSS classes that can be stripped
-    or overridden inside st.markdown containers.
-    """
-    BASE   = "font-family:'Inter',sans-serif;"
-    INK    = "color:#1C2B22;"
-    MUTED  = "color:#6B7566;"
-    ACCENT = "color:#2E6E4E;"
-    BORDER = "border-bottom:1px solid #E4DDD1;"
-
+def _render_cart_native(cart: list[dict], total: int) -> None:
+    """Render cart using native Streamlit widgets — avoids HTML sanitization issues."""
     if not cart:
-        return (
-            f"<div style='{BASE}{MUTED}text-align:center;padding:20px 0;font-size:0.85rem;'>"
-            "🛒 Keranjang masih kosong.</div>"
-        )
+        st.caption("🛒 Keranjang masih kosong.")
+        return
 
-    rows = ""
     for item in cart:
         subtotal = item["price"] * item["qty"]
-        rows += f"""
-        <div style="display:flex;justify-content:space-between;align-items:center;
-                    padding:9px 0;{BORDER}{BASE}font-size:0.85rem;{INK}">
-            <span>
-                {item['emoji']} <strong>{item['item'].capitalize()}</strong>
-                <span style="font-size:0.72rem;font-weight:600;background:#EBF5EF;
-                             {ACCENT}padding:2px 8px;border-radius:20px;margin-left:6px;">
-                    {item['qty']}x
-                </span>
-            </span>
-            <span style="font-weight:500;">Rp {subtotal:,}</span>
-        </div>"""
+        c1, c2 = st.columns([3, 2])
+        with c1:
+            st.markdown(f"{item['emoji']} **{item['item'].capitalize()}** `{item['qty']}x`")
+        with c2:
+            st.markdown(
+                f"<div style='text-align:right;font-weight:500;'>Rp {subtotal:,}</div>",
+                unsafe_allow_html=True,
+            )
 
-    return f"""
-    {rows}
-    <div style="display:flex;justify-content:space-between;align-items:center;
-                padding-top:12px;{BASE}font-size:1rem;font-weight:700;{INK}">
-        <span>Total</span>
-        <span style="{ACCENT}">Rp {total:,}</span>
-    </div>
-    """
+    st.divider()
+    t1, t2 = st.columns([3, 2])
+    with t1:
+        st.markdown("**Total**")
+    with t2:
+        st.markdown(
+            f"<div style='text-align:right;font-weight:700;color:#2E6E4E;font-size:1rem;'>"
+            f"Rp {total:,}</div>",
+            unsafe_allow_html=True,
+        )
 
 
 # ── 5. HEADER ─────────────────────────────────────────────────────────────────
@@ -381,15 +366,8 @@ with col_chat:
     cart  = st.session_state.bot.cart
     total = st.session_state.bot.calculate_total()
 
-    cart_inner = _render_cart_html(cart, total)
-    st.markdown(
-        f"""<div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);
-                        -webkit-backdrop-filter:blur(16px);border:1px solid #E4DDD1;
-                        border-radius:24px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08);">
-            {cart_inner}
-        </div>""",
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        _render_cart_native(cart, total)
 
     st.write("")
 
