@@ -1,379 +1,209 @@
 import streamlit as st
 from fsm import LivestockFSM
 
-# ── 1. PAGE CONFIG ────────────────────────────────────────────────────────────
+# --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(
-    page_title="Berkah Ternak",
-    page_icon="🌾",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    page_title="Berkah Ternak Hub - Modern Agribusiness", 
+    page_icon="🚜", 
+    layout="wide"
 )
 
-# ── 2. DESIGN SYSTEM ──────────────────────────────────────────────────────────
+# --- 2. CUSTOM STYLING (CSS) ---
 st.markdown("""
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
 <style>
-:root {
-    --bg:         #F5F2EC;
-    --surface:    #FFFFFF;
-    --border:     #E4DDD1;
-    --ink:        #1C2B22;
-    --ink-muted:  #6B7566;
-    --accent:     #2E6E4E;
-    --accent-lt:  #EBF5EF;
-    --accent-dim: #C5E0D0;
-    --danger:     #DC2626;
-    --danger-lt:  #FEF2F2;
-    --radius-sm:  10px;
-    --radius-md:  16px;
-    --radius-lg:  24px;
-    --shadow-sm:  0 1px 4px rgba(0,0,0,.06);
-    --shadow-md:  0 4px 16px rgba(0,0,0,.08);
-}
-
-.stApp { background-color: var(--bg) !important; }
-.block-container { padding-top: 2rem !important; }
-
-/* Typography */
-.site-title {
-    font-family: 'Sora', sans-serif;
-    font-size: clamp(1.6rem, 4vw, 2.4rem);
-    font-weight: 700;
-    color: var(--ink);
-    letter-spacing: -0.5px;
-    margin: 0;
-    line-height: 1.2;
-}
-.site-sub {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    color: var(--ink-muted);
-    margin-top: 4px;
-}
-.section-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-    margin-bottom: 12px;
-    display: block;
-}
-
-/* Product card */
-.product-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 20px 16px 16px;
-    text-align: center;
-    box-shadow: var(--shadow-sm);
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-}
-.product-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--accent-dim);
-}
-.card-emoji {
-    font-size: 2.4rem;
-    background: var(--accent-lt);
-    width: 60px; height: 60px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 12px;
-}
-.card-name  { font-family:'Sora',sans-serif; font-size:1rem; font-weight:700; color:var(--ink); margin-bottom:2px; }
-.card-desc  { font-family:'Inter',sans-serif; font-size:0.78rem; color:var(--ink-muted); margin-bottom:10px; line-height:1.4; }
-.card-price { font-family:'Inter',sans-serif; font-size:0.95rem; font-weight:600; color:var(--accent); margin-bottom:14px; }
-
-/* Buttons */
-.stButton > button {
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.82rem !important;
-    font-weight: 600 !important;
-    color: var(--accent) !important;
-    background: var(--accent-lt) !important;
-    border: 1px solid var(--accent-dim) !important;
-    border-radius: var(--radius-sm) !important;
-    padding: 7px 12px !important;
-    width: 100% !important;
-    transition: background .15s ease, transform .12s ease !important;
-    box-shadow: none !important;
-}
-.stButton > button:hover {
-    background: var(--accent-dim) !important;
-    transform: translateY(-1px) !important;
-}
-
-/* Cart qty control buttons — compact, no full-width */
-.qty-btn .stButton > button {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: unset !important;
-    padding: 0 !important;
-    border-radius: 8px !important;
-    font-size: 1rem !important;
-    line-height: 1 !important;
-}
-.qty-btn-minus .stButton > button {
-    background: var(--danger-lt) !important;
-    color: var(--danger) !important;
-    border-color: #FECACA !important;
-}
-.qty-btn-minus .stButton > button:hover { background: #FECACA !important; }
-
-.qty-btn-delete .stButton > button {
-    background: var(--danger-lt) !important;
-    color: var(--danger) !important;
-    border-color: #FECACA !important;
-    font-size: 0.75rem !important;
-}
-
-/* Reset button */
-.reset-btn .stButton > button {
-    color: var(--ink-muted) !important;
-    background: transparent !important;
-    border: 1px solid var(--border) !important;
-    font-size: 0.78rem !important;
-}
-.reset-btn .stButton > button:hover {
-    background: var(--border) !important;
-    transform: none !important;
-}
-
-/* Chat bubbles */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-    background: var(--accent) !important;
-    border-radius: 18px 18px 4px 18px !important;
-    padding: 10px 16px !important;
-    max-width: 80%;
-    margin-left: auto;
-}
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 18px 18px 18px 4px !important;
-    padding: 10px 16px !important;
-    max-width: 82%;
-    box-shadow: var(--shadow-sm);
-}
-[data-testid="stChatInputContainer"] textarea {
-    font-family: 'Inter', sans-serif !important;
-    border-radius: var(--radius-sm) !important;
-    border-color: var(--border) !important;
-    background: var(--surface) !important;
-}
-
-/* State badge */
-.state-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.7rem; font-weight: 600;
-    letter-spacing: 0.04em; text-transform: uppercase;
-    color: var(--ink-muted);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    padding: 4px 10px; border-radius: 20px;
-}
-
-hr { border-color: var(--border) !important; }
+    .stApp {
+        background: linear-gradient(135deg, #f3f7f0 0%, #e9f1e4 50%, #dfebd5 100%);
+        background-attachment: fixed;
+    }
+    .main-title {
+        color: #1b381b;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 2px;
+    }
+    .sub-title {
+        color: #4a613c;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 30px;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 24px !important;
+        color: #274e13 !important;
+        font-weight: bold;
+    }
+    .status-box {
+        background-color: rgba(255, 255, 255, 0.6);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 5px solid #4a613c;
+        margin-bottom: 15px;
+    }
+    .receipt-box {
+        background-color: #ffffff;
+        border: 1px dashed #99a78f;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', Courier, monospace;
+        margin-bottom: 15px;
+        color: #222222;
+    }
+    div[data-testid="stContainer"] {
+        background-color: rgba(255, 255, 255, 0.75);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+    .item-title { font-size: 18px; font-weight: bold; color: #222222; margin-bottom: 0px; }
+    .item-caption { font-size: 13px; color: #666666; }
+    .item-price { font-size: 16px; font-weight: bold; color: #222222; text-align: right; }
+    .qty-display { font-size: 18px; font-weight: bold; text-align: center; margin-top: 5px; }
 </style>
 """, unsafe_allow_html=True)
 
-
-# ── 3. SESSION INIT ───────────────────────────────────────────────────────────
-if "bot" not in st.session_state:
+# --- 3. INITIALIZATION SESSION STATE ---
+if 'bot' not in st.session_state:
     st.session_state.bot = LivestockFSM()
-    st.session_state.bot.step()
-    st.session_state.history = [
-        {"role": "assistant", "content": st.session_state.bot.get_response()}
-    ]
+    st.session_state.bot.step()  
+    st.session_state.history = [{"role": "assistant", "content": st.session_state.bot.get_response()}]
 
+# --- 4. HEADER UTAMA ---
+st.markdown("<h1 class='main-title'>🚜 BERKAH TERNAK SMART HUB</h1>", unsafe_allow_html=True)
+st.markdown("<p class='sub-title'>Platform Digital Komoditas Hasil Ternak Segar & Higienis</p>", unsafe_allow_html=True)
 
-# ── 4. HELPERS ────────────────────────────────────────────────────────────────
-def _send(user_text: str) -> None:
-    st.session_state.history.append({"role": "user", "content": user_text})
-    st.session_state.bot.step(user_text)
-    st.session_state.history.append(
-        {"role": "assistant", "content": st.session_state.bot.get_response()}
-    )
-    st.rerun()
+# --- 5. GRID LAYOUT UTAMA ---
+col_meta, col_katalog, col_chatbox = st.columns([4, 9, 9], gap="medium")
 
-
-def _render_cart(cart: list[dict], total: int, in_confirmation: bool) -> None:
-    """
-    Render cart dengan qty controls (+/−/🗑) per item.
-    Controls dinonaktifkan saat state CONFIRMATION.
-    """
-    if not cart:
-        st.caption("🛒 Keranjang masih kosong.")
-        return
-
-    for item in cart:
-        key      = item["item"]
-        subtotal = item["price"] * item["qty"]
-
-        # Layout: emoji+nama | qty controls | harga
-        col_name, col_ctrl, col_price = st.columns([4, 3, 3])
-
-        with col_name:
-            st.markdown(
-                f"**{item['emoji']} {key.capitalize()}**  \n"
-                f"<span style='font-size:0.75rem;color:#6B7566;'>"
-                f"Rp {item['price']:,} / satuan</span>",
-                unsafe_allow_html=True,
-            )
-
-        with col_ctrl:
-            if not in_confirmation:
-                b1, b2, b3 = st.columns([1, 1, 1])
-                with b1:
-                    st.markdown("<div class='qty-btn qty-btn-minus'>", unsafe_allow_html=True)
-                    if st.button("−", key=f"minus_{key}"):
-                        st.session_state.bot.cart_update_qty(key, -1)
-                        st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
-                with b2:
-                    st.markdown(
-                        f"<div style='text-align:center;font-weight:700;"
-                        f"font-size:0.95rem;padding-top:5px;'>{item['qty']}</div>",
-                        unsafe_allow_html=True,
-                    )
-                with b3:
-                    st.markdown("<div class='qty-btn'>", unsafe_allow_html=True)
-                    if st.button("+", key=f"plus_{key}"):
-                        st.session_state.bot.cart_update_qty(key, +1)
-                        st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(
-                    f"<div style='text-align:center;font-weight:700;"
-                    f"font-size:0.95rem;padding-top:5px;'>{item['qty']}x</div>",
-                    unsafe_allow_html=True,
-                )
-
-        with col_price:
-            delete_col, price_col = st.columns([1, 2])
-            with price_col:
-                st.markdown(
-                    f"<div style='text-align:right;font-weight:600;"
-                    f"padding-top:5px;'>Rp {subtotal:,}</div>",
-                    unsafe_allow_html=True,
-                )
-            with delete_col:
-                if not in_confirmation:
-                    st.markdown("<div class='qty-btn qty-btn-delete'>", unsafe_allow_html=True)
-                    if st.button("🗑", key=f"del_{key}"):
-                        st.session_state.bot.cart_remove(key)
-                        st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.divider()
-
-    total_col1, total_col2 = st.columns([3, 2])
-    with total_col1:
-        st.markdown("**Total Belanja**")
-    with total_col2:
-        st.markdown(
-            f"<div style='text-align:right;font-weight:700;color:#2E6E4E;"
-            f"font-size:1.05rem;'>Rp {total:,}</div>",
-            unsafe_allow_html=True,
-        )
-
-
-# ── 5. HEADER ─────────────────────────────────────────────────────────────────
-st.markdown("""
-<div style="text-align:center; padding: 8px 0 28px;">
-    <div class="site-title">🌾 Berkah Ternak</div>
-    <div class="site-sub">Produk segar peternakan lokal · Asisten pemesanan berbasis Otomata</div>
-</div>
-""", unsafe_allow_html=True)
-
-
-# ── 6. MAIN LAYOUT ────────────────────────────────────────────────────────────
-col_products, col_chat = st.columns([5, 5], gap="large")
-
-# ════════════════════════════════════════
-# LEFT — PRODUCT GRID
-# ════════════════════════════════════════
-with col_products:
-    st.markdown("<span class='section-label'>Produk Pilihan</span>", unsafe_allow_html=True)
-
-    items     = list(st.session_state.bot.nlp.menu_data.items())
-    grid_rows = [items[i:i+2] for i in range(0, len(items), 2)]
-
-    for row in grid_rows:
-        cols = st.columns(len(row), gap="small")
-        for col, (key, data) in zip(cols, row):
-            with col:
-                st.markdown(f"""
-                <div class="product-card">
-                    <div class="card-emoji">{data['emoji']}</div>
-                    <div class="card-name">{key.capitalize()}</div>
-                    <div class="card-desc">{data['desc']}</div>
-                    <div class="card-price">Rp {data['price']:,}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                if st.button(f"+ Pesan {key.capitalize()}", key=f"btn_{key}"):
-                    _send(f"pesan 1 {key}")
-
-
-# ════════════════════════════════════════
-# RIGHT — CHAT + CART
-# ════════════════════════════════════════
-with col_chat:
-
-    # ── Chat ──
-    st.markdown("<span class='section-label'>Konsultasi & Pemesanan</span>", unsafe_allow_html=True)
-
-    chat_box = st.container(height=290, border=False)
-    with chat_box:
-        for msg in st.session_state.history:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-
-    if prompt := st.chat_input("Ketik: 'pesan 2 telur', 'kurangi 1 susu', 'menu'…"):
-        _send(prompt)
-
-    st.write("")
-
-    # ── Cart Panel ──
-    st.markdown("<span class='section-label'>Ringkasan Belanja</span>", unsafe_allow_html=True)
-
-    cart          = st.session_state.bot.cart
-    total         = st.session_state.bot.calculate_total()
-    current_state = st.session_state.bot.state.name
-    in_confirm    = current_state == "CONFIRMATION"
-
+# =========================================================
+# === KOLOM 1 (KIRI): UTILITY & STATUS PETERNAKAN ===
+# =========================================================
+with col_meta:
+    st.markdown("### 🌾 Info Peternakan")
     with st.container(border=True):
-        _render_cart(cart, total, in_confirm)
-
+        st.markdown("**🏡 Lokasi:** Kandang Berkah, Secang")
+        st.markdown("**⏱️ Jam Ambil:** 06:00 - 17:00 WIB")
+        st.markdown("**🛡️ Jaminan:** 100% Organik & Segar")
+    
     st.write("")
-
-    # ── Contextual action button ──
-    if cart and current_state == "ORDERING":
-        if st.button("🚀 Selesai & Checkout", key="btn_checkout"):
-            _send("checkout")
-
-    elif current_state == "CONFIRMATION":
-        if st.button("💳 Konfirmasi & Bayar Sekarang", key="btn_pay"):
-            _send("ya")
-
-    # ── State badge + Reset ──
-    badge_col, reset_col = st.columns([3, 1])
-    with badge_col:
+    st.markdown("### ⚙️ Mesin Sistem (FSM)")
+    with st.container(border=True):
         st.markdown(
-            f"<span class='state-badge'>⚙ {current_state}</span>",
-            unsafe_allow_html=True,
+            f"<div class='status-box'>State Aktif:<br><strong>{st.session_state.bot.state.name}</strong></div>", 
+            unsafe_allow_html=True
         )
-    with reset_col:
-        st.markdown("<div class='reset-btn'>", unsafe_allow_html=True)
-        if st.button("↺ Reset", key="btn_reset"):
+        if st.button("🔄 Reset Total Sistem", use_container_width=True, type="secondary"):
             st.session_state.clear()
             st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================================================
+# === KOLOM 2 (TENGAH): KATALOG DIGITAL INTERAKTIF ===
+# =========================================================
+with col_katalog:
+    st.markdown("### 🥩 Produk Unggulan Hari Ini")
+    st.caption("Pilih produk segar di bawah ini untuk ditambahkan langsung ke dalam keranjang belanja.")
+    
+    menu_items = st.session_state.bot.nlp.menu_data
+    sub_cols = st.columns(2)
+    
+    for index, (key, data) in enumerate(menu_items.items()):
+        with sub_cols[index % 2]:
+            with st.container(border=True):
+                st.markdown(f"#### {data['emoji']} {key.capitalize()}")
+                st.markdown(f"*{data['desc']}*")
+                st.metric(label="Harga per Satuan", value=f"Rp {data['price']:,}")
+                
+                is_disabled = st.session_state.bot.state.name in ["CONFIRMATION", "PAYMENT"]
+                if st.button(f"🛒 Ambil {key.capitalize()}", key=f"shop_{key}", use_container_width=True, disabled=is_disabled):
+                    st.session_state.history.append({"role": "user", "content": f"Menambahkan 1 {data['emoji']} {key.capitalize()} via katalog"})
+                    st.session_state.bot.step(f"pesan 1 {key}")
+                    st.session_state.history.append({"role": "assistant", "content": st.session_state.bot.get_response()})
+                    st.rerun()
+
+# =========================================================
+# === KOLOM 3 (KANAN): ASISTEN VIRTUAL & RINGKASAN POS ===
+# =========================================================
+with col_chatbox:
+    tab_bot_room, tab_nota_final = st.tabs(["💬 Asisten Virtual", "📜 Nota Keluar & Riwayat"])
+    
+    # --- SUB TAB 1: CHAT ROOM & RINGKASAN BELANJA AKTIF ---
+    with tab_bot_room:
+        if st.session_state.bot.cart:
+            st.markdown("<p style='font-size: 14px; font-weight: bold; color: #555555; letter-spacing: 0.5px;'>RINGKASAN BELANJA</p>", unsafe_allow_html=True)
+            
+            with st.container(border=True):
+                total_tagihan = 0
+                for i, item in enumerate(st.session_state.bot.cart):
+                    subtotal = item['price'] * item['qty']
+                    total_tagihan += subtotal
+                    
+                    c_info, c_min, c_qty, c_plus, c_sub = st.columns([7, 2, 2, 2, 5])
+                    with c_info:
+                        st.markdown(f"<p class='item-title'>{item['emoji']} {item['item'].capitalize()}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p class='item-caption'>Rp {item['price']:,} / satuan</p>", unsafe_allow_html=True)
+                    
+                    with c_min:
+                        if st.button("−", key=f"minus_{item['item']}_{i}", use_container_width=True):
+                            st.session_state.bot.step(f"kurangi 1 {item['item']}")
+                            st.rerun()
+                    with c_qty:
+                        st.markdown(f"<p class='qty-display'>{item['qty']}</p>", unsafe_allow_html=True)
+                    with c_plus:
+                        if st.button("＋", key=f"plus_{item['item']}_{i}", use_container_width=True):
+                            st.session_state.bot.step(f"pesan 1 {item['item']}")
+                            st.rerun()
+                    with c_sub:
+                        st.markdown(f"<p class='item-price'>Rp {subtotal:,}</p>", unsafe_allow_html=True)
+                        if st.button("🗑️", key=f"del_{item['item']}_{i}", use_container_width=True):
+                            st.session_state.bot.step(f"kurangi {item['qty']} {item['item']}")
+                            st.rerun()
+                st.divider()
+                
+                c_total_label, c_total_val = st.columns([12, 6])
+                with c_total_label:
+                    st.markdown("#### Total Belanja")
+                with c_total_val:
+                    st.markdown(f"<h4 style='text-align: right; color: #274e13;'>Rp {total_tagihan:,}</h4>", unsafe_allow_html=True)
+            
+            if st.button("🚀 Selesai & Checkout", use_container_width=True, type="primary"):
+                st.session_state.history.append({"role": "user", "content": "checkout"})
+                st.session_state.bot.step("checkout")
+                st.session_state.history.append({"role": "assistant", "content": st.session_state.bot.get_response()})
+                st.rerun()
+
+        # Area Obrolan Chat History
+        box_obrolan = st.container(height=300)
+        with box_obrolan:
+            for msg in st.session_state.history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+                    
+        if prompt := st.chat_input("Ketik pesanan baru atau ketik 'bayar'..."):
+            st.session_state.history.append({"role": "user", "content": prompt})
+            st.session_state.bot.step(prompt)
+            st.session_state.history.append({"role": "assistant", "content": st.session_state.bot.get_response()})
+            st.rerun()
+
+    # --- SUB TAB 2: TEMPAT NOTA RESMI KELUAR ---
+    with tab_nota_final:
+        st.markdown("#### 📄 Dokumen Nota Resmi (Sukses Dibayar)")
+        
+        # Mengambil langsung dari array invoice_logs yang disimpan aman di dalam FSM
+        if st.session_state.bot.invoice_logs:
+            for nota in reversed(st.session_state.bot.invoice_logs):
+                st.markdown(f"""
+                <div class='receipt-box'>
+                    <strong>BERKAH TERNAK HUB RECEIPT</strong><br>
+                    --------------------------------<br>
+                    No. Nota : {nota['id']}<br>
+                    Waktu    : {nota['waktu']}<br>
+                    --------------------------------<br>
+                    {"<br>".join([f"{idx+1}. {item['item'].upper()} ({item['qty']}x) = Rp {item['price']*item['qty']:,}" for idx, item in enumerate(nota['items'])])}<br>
+                    --------------------------------<br>
+                    <strong>TOTAL NETT: Rp {nota['total']:,}</strong><br>
+                    ================================<br>
+                    <span style='font-size:11px;'>Status: LUNAS & SAH</span>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Belum ada nota keluar. Selesaikan transaksi hingga pembayaran sukses untuk mencetak nota.")
