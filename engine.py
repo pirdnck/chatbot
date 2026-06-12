@@ -2,12 +2,11 @@ import re
 
 class LivestockEngine:
     def __init__(self):
-        # Database Produk Hasil Peternakan
         self.menu_data = {
-            "susu": {"price": 12000, "emoji": "🥛", "desc": "Susu sapi segar literan"},
-            "telur": {"price": 26000, "emoji": "🥚", "desc": "Telur ayam ras per kg"},
-            "daging": {"price": 35000, "emoji": "🍗", "desc": "Daging ayam segar per kg"},
-            "madu": {"price": 50000, "emoji": "🍯", "desc": "Madu murni alami 250ml"}
+            "susu": {"price": 12000, "emoji": "", "desc": "Susu sapi segar literan"},
+            "telur": {"price": 26000, "emoji": "", "desc": "Telur ayam ras per kg"},
+            "daging": {"price": 35000, "emoji": "", "desc": "Daging ayam segar per kg"},
+            "madu": {"price": 50000, "emoji": "", "desc": "Madu murni alami 250ml"}
         }
         
         self.re_number = r"\b(\d+)\b"
