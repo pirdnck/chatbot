@@ -2,7 +2,7 @@ import streamlit as st
 from fsm import LivestockFSM
 
 st.set_page_config(
-    page_title="livestockshop - Modern Agribusiness", 
+    page_title="livestockshop", 
     layout="wide"
 )
 
